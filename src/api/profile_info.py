@@ -1,4 +1,4 @@
-# Data Acquistion: 1° step
+# Data Acquisition: 1° step
 # Getting master data about player's profile from chess.com platform
 
 from chessdotcom import get_player_profile
@@ -14,7 +14,7 @@ class ProfileUpdater:
         super().__init__()
         self.conn = MongoConnection("delo_dm_project", "Xhemil1960")
         self.players = self.conn.db["players"]
-        self.chess_profiles = self.conn.db["chess_profiles"]
+        self.chess_profiles = self.conn.db["profiles"]
 
     def update_profiles(self):
 
@@ -24,6 +24,7 @@ class ProfileUpdater:
         for player in all_players:
             username = player.get("username")
             single_data = get_player_profile(username).json.get("player")
+            single_data["username"] = username
             all_data.append(single_data)
 
         df_format = pd.DataFrame.from_dict(all_data, orient='columns')
@@ -34,7 +35,7 @@ class ProfileUpdater:
             lambda x: datetime.fromtimestamp(x).isoformat())
 
         df_format = df_format.rename(
-            columns={'avatar': 'avatar', 'player_id': 'chess_player_id',
+            columns={'avatar': 'avatar', 'player_id': 'player_id',
                      '@id': 'link_profile', 'url': 'URL', 'name': 'name',
                      'username': 'username', 'title': 'title',
                      'followers': 'followers', 'country': 'country',
@@ -43,8 +44,6 @@ class ProfileUpdater:
                      'is_streamer': 'streamer', 'verified': 'verified',
                      'league': 'league', 'twitch_url': 'twitch_url'}
         )
-
-        df_format["username"] = df_format["username"].str.capitalize()
 
         df_format = df_format.fillna("replaceWithNone")
         df_format.loc[df_format.avatar == "replaceWithNone", 'avatar'] = None
@@ -56,7 +55,7 @@ class ProfileUpdater:
 
         try:
             upsert_data = [
-                UpdateOne({'chess_player_id': x['chess_player_id']}, {'$set': x}, upsert=True) for x in all_profiles
+                UpdateOne({'player_id': x['player_id']}, {'$set': x}, upsert=True) for x in all_profiles
             ]
             self.chess_profiles.bulk_write(upsert_data)
 
