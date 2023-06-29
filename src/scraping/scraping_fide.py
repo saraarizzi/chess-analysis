@@ -13,7 +13,7 @@ class FIDEScraper(Scraper):
 
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection()
+        self.conn = MongoConnection("mik_dm_project", "Spindox!99")
         self.players = self.conn.db["players"]
 
     def scrape_fide(self):
@@ -36,7 +36,6 @@ class FIDEScraper(Scraper):
         # access to button through XPATH and click()
         ratings_button.click()
 
-        list_final = []
         # Defining a function to search & scrape name
         for id_player in fide_id_list:
             self.driver.find_element(By.XPATH, '//*[@id="dyn1"]').send_keys(id_player)
@@ -49,44 +48,49 @@ class FIDEScraper(Scraper):
                 lista_tmp = []
                 for td in tr.find_elements(By.XPATH, ".//td"):
                     lista_tmp.append(td.text)
-                    # lista_tmp.pop(2)
-                dict_tmp['standard_fide_rating'] = lista_tmp[3]
-                dict_tmp['rapid_fide_rating'] = lista_tmp[4]
-                dict_tmp['blitz_fide_rating'] = lista_tmp[5]
-                dict_tmp['birth_year'] = lista_tmp[6]
-                dict_tmp['player_id'] = id_player
-                list_final.append(dict_tmp)
+                dict_tmp['standard_fide_rating'] = int(lista_tmp[4].strip())
+                dict_tmp['rapid_fide_rating'] = int(lista_tmp[5].strip())
+                dict_tmp['blitz_fide_rating'] = int(lista_tmp[6].strip())
+                dict_tmp['birth_year'] = lista_tmp[7].strip()
+                dict_tmp['fide_id'] = id_player
                 self.insert(dict_tmp)
                 lista_tmp.clear()
             self.driver.find_element(By.XPATH, '//*[@id="dyn1"]').clear()
 
-        print(list_final)
+        print("DONE")
 
     def insert(self, obj):
         try:
-            before = self.players.find_one({'fullname': obj['fullname']})
+            before = self.players.find_one({'fide_id': obj['fide_id']})
 
-            update_result = self.players.update_one({'fullname': obj['fullname']}, {'$set': obj}, upsert=False)
+            update_result = self.players.update_one({'fide_id': obj['fide_id']}, {'$set': obj}, upsert=False)
 
             if bool(update_result.modified_count):
-                after = self.players.find_one({'fullname': obj['fullname']})
+                after = self.players.find_one({'fide_id': obj['fide_id']})
 
-                rank_before = before.get("rank")
-                rank_after = after.get("rank")
+                std_before = before.get("standard_fide_rating")
+                std_after = after.get("standard_fide_rating")
 
-                rating_before = before.get("rating")
-                rating_after = after.get("rating")
+                rapid_before = before.get("rapid_fide_rating")
+                rapid_after = after.get("rapid_fide_rating")
+
+                blz_before = before.get("blitz_fide_rating")
+                blz_after = after.get("blitz_fide_rating")
 
                 rows = []
                 updated = False
                 now = datetime.now().isoformat()
-                if rank_before != rank_after:
+                if std_before != std_after:
                     updated = True
-                    rows.append((str(after.get("_id")), after.get("fullname"), rank_before, rank_after, 'leaderboard_rank', now))
+                    rows.append((str(after.get("_id")), after.get("fide_id"), std_before, std_after, 'std_fide', now))
 
-                if rating_before != rating_after:
+                if rapid_before != rapid_after:
                     updated = True
-                    rows.append((str(after.get("_id")), after.get("fullname"), rating_before, rating_after, 'leaderboard_rating', now))
+                    rows.append((str(after.get("_id")), after.get("fide_id"), rapid_before, rapid_after, 'rapid_fide', now))
+
+                if blz_before != blz_after:
+                    updated = True
+                    rows.append((str(after.get("_id")), after.get("fide_id"), blz_before, blz_after, 'blz_fide', now))
 
                 if updated:
                     pass

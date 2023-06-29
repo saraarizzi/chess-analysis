@@ -16,7 +16,7 @@ from src.mongo.connection import MongoConnection
 class LeaderboardScraper(Scraper):
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection()
+        self.conn = MongoConnection("sara-dm-project", "9zc0Kfy9M644W1YD")
         self.players = self.conn.db["players"]
         self.page_players = None
         self.iter_player = None
@@ -48,12 +48,12 @@ class LeaderboardScraper(Scraper):
 
                         spl = text[1].split("|")
                         obj["rank"] = int(spl[1].replace("#", "").strip())
-                        obj["rating"] = int(spl[0].strip())
+                        obj["leaderboard_rating"] = int(spl[0].strip())
 
                         obj["country"] = text[2]
 
                         obj["username"] = self.iter_player.get_dom_attribute("data-username")
-                        obj["uuid"] = self.iter_player.get_dom_attribute("data-user-uuid")
+                        # obj["uuid"] = self.iter_player.get_dom_attribute("data-user-uuid")
 
                         avatar = self.iter_player.find_element(By.CLASS_NAME, "post-author-avatar")
                         link = avatar.get_attribute("href")
@@ -65,7 +65,9 @@ class LeaderboardScraper(Scraper):
 
                         print(f"{obj.get('fullname')} --> updated")
 
-                    except StaleElementReferenceException:
+                    # except StaleElementReferenceException:
+                    except Exception as e:
+                        print(e)
                         self.driver.refresh()
 
                         WebDriverWait(self.driver, 10).until(
@@ -89,29 +91,29 @@ class LeaderboardScraper(Scraper):
 
     def insert(self, obj):
         try:
-            before = self.players.find_one({'fullname': obj['fullname']})
+            before = self.players.find_one({'fide_id': obj['fide_id']})
 
-            update_result = self.players.update_one({'fullname': obj['fullname']}, {'$set': obj}, upsert=False)
+            update_result = self.players.update_one({'fide_id': obj['fide_id']}, {'$set': obj}, upsert=True)
 
             if bool(update_result.modified_count):
-                after = self.players.find_one({'fullname': obj['fullname']})
+                after = self.players.find_one({'fide_id': obj['fide_id']})
 
                 rank_before = before.get("rank")
                 rank_after = after.get("rank")
 
-                rating_before = before.get("rating")
-                rating_after = after.get("rating")
+                rating_before = before.get("leaderboard_rating")
+                rating_after = after.get("leaderboard_rating")
 
                 rows = []
                 updated = False
                 now = datetime.datetime.now().isoformat()
                 if rank_before != rank_after:
                     updated = True
-                    rows.append((str(after.get("_id")), after.get("fullname"), rank_before, rank_after, 'leaderboard_rank', now))
+                    rows.append((str(after.get("_id")), after.get("fide_id"), rank_before, rank_after, 'leaderboard_rank', now))
 
                 if rating_before != rating_after:
                     updated = True
-                    rows.append((str(after.get("_id")), after.get("fullname"), rating_before, rating_after, 'leaderboard_rating', now))
+                    rows.append((str(after.get("_id")), after.get("fide_id"), rating_before, rating_after, 'leaderboard_rating', now))
 
                 if updated:
                     pass
