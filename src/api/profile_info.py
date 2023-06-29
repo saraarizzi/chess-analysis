@@ -3,7 +3,6 @@
 
 from chessdotcom import get_player_profile
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from pymongo import UpdateOne
 from src.mongo.connection import MongoConnection
