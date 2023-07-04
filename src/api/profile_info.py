@@ -14,7 +14,6 @@ class ProfileUpdater:
         super().__init__()
         self.conn = MongoConnection("delo_dm_project", "Xhemil1960")
         self.players = self.conn.db["players"]
-        self.chess_profiles = self.conn.db["profiles"]
 
     def update_profiles(self):
 
@@ -29,14 +28,12 @@ class ProfileUpdater:
 
         df_format = pd.DataFrame.from_dict(all_data, orient='columns')
 
-        df_format["last_online"] = df_format["last_online"].apply(
-            lambda x: datetime.fromtimestamp(x).isoformat())
         df_format["joined"] = df_format["joined"].apply(
             lambda x: datetime.fromtimestamp(x).isoformat())
 
         df_format = df_format.rename(
             columns={'avatar': 'avatar', 'player_id': 'player_id',
-                     '@id': 'link_profile', 'url': 'URL', 'name': 'name',
+                     '@id': 'link_profile', 'url': 'url', 'name': 'name',
                      'username': 'username', 'title': 'title',
                      'followers': 'followers', 'country': 'country',
                      'location': 'location', 'last_online': 'last_online',
@@ -47,17 +44,19 @@ class ProfileUpdater:
 
         df_format = df_format.fillna("replaceWithNone")
         df_format.loc[df_format.avatar == "replaceWithNone", 'avatar'] = None
-        df_format.loc[df_format.name == "replaceWithNone", 'name'] = None
-        df_format.loc[df_format.location == "replaceWithNone", 'location'] = None
         df_format.loc[df_format.league == "replaceWithNone", 'league'] = None
         df_format.loc[df_format.twitch_url == "replaceWithNone", 'twitch_url'] = None
+
+        # drop columns
+        df_format.drop(["player_id", "link_profile", "name", "country", "location", "last_online", "title"], axis=1, inplace=True)
+
         all_profiles = df_format.to_dict('records')
 
         try:
             upsert_data = [
-                UpdateOne({'player_id': x['player_id']}, {'$set': x}, upsert=True) for x in all_profiles
+                UpdateOne({'username': x['username']}, {'$set': x}, upsert=False) for x in all_profiles
             ]
-            self.chess_profiles.bulk_write(upsert_data)
+            self.players.bulk_write(upsert_data)
 
         except Exception as e:
             print(e)

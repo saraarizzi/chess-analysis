@@ -10,4 +10,5 @@ class Scraper:
         path = "driver/chromedriver"
         service_object = Service(path)
         d = webdriver.Chrome(service=service_object)
+
         return d

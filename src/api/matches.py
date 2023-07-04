@@ -1,7 +1,10 @@
 from datetime import datetime
+
+import numpy as np
 from chessdotcom import get_player_game_archives
 import requests
 from pymongo import InsertOne
+import re
 
 from src.mongo.connection import MongoConnection
 
@@ -10,9 +13,8 @@ class MatchArchive:
 
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection("delo_dm_project", "Xhemil1960")
+        self.conn = MongoConnection("arizzisara", "JAnVC9Nedesi4cPD")
         self.players = self.conn.db["players"]
-        self.chess_profiles = self.conn.db["chess_profiles"]
         self.matches = self.conn.db["matches"]
 
     def get_matches(self):
@@ -24,17 +26,21 @@ class MatchArchive:
             single_data = get_player_game_archives(username).json
             urls = single_data.get("archives")
 
-            player_matches = []
             print(f"Number of archives --> {len(urls)}")
+            count = 0
+            if len(urls) > 20:
+                urls = urls[:20]
+                print(f"Rectified number of archives --> {len(urls)}")
+
             for url in urls:
+                count += 1
                 data = requests.get(url).json()
                 games = data.get("games")
 
+                player_matches = []
                 for g in games:
 
                     game = g.copy()
-
-                    game["username"] = username
 
                     game.pop("end_time", None)
                     game.pop("tcn", None)
@@ -47,17 +53,17 @@ class MatchArchive:
                         game["start_time"] = info.get("start_time")
                         game["end_time"] = info.get("end_time")
                         game["duration"] = info.get("duration")
+                        game["moves"] = info.get("moves")
 
                         game.pop("pgn", None)
 
                     player_matches.append(game)
 
-            if len(player_matches) > 0:
+                # insert
                 insert_data = [InsertOne(match) for match in player_matches]
                 self.matches.bulk_write(insert_data)
-                print(f"total --> {len(insert_data)} matches ")
-            else:
-                print("no matches found")
+
+                print(f"progressing... {np.round(count/len(urls)*100, 2)} matches inserted")
 
         print("DONE")
 
@@ -80,10 +86,20 @@ class MatchArchive:
 
         duration = int((end_datetime - start_datetime).total_seconds())
 
+        # pgn regex to get match moves
+        spl = game.split("\n")
+        pgn = spl[len(spl)-2]
+
+        spl = re.sub(r"[{].*?[}]", "split", pgn)
+
+        rs = spl.split("split")
+        moves = "".join([el[6:] if ix % 2 == 1 else el for ix, el in enumerate(rs)])
+
         return {
             "start_time": start_datetime.isoformat(),
             "end_time": end_datetime.isoformat(),
-            "duration": duration
+            "duration": duration,
+            "moves": moves
         }
 
 
