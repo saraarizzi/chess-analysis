@@ -28,8 +28,8 @@ class MatchArchive:
 
             print(f"Number of archives --> {len(urls)}")
             count = 0
-            if len(urls) > 20:
-                urls = urls[:20]
+            if len(urls) > 30:
+                urls = urls[-30:]
                 print(f"Rectified number of archives --> {len(urls)}")
 
             for url in urls:
