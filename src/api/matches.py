@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from chessdotcom import get_player_game_archives
@@ -16,6 +16,27 @@ class MatchArchive:
         self.conn = MongoConnection("arizzisara", "JAnVC9Nedesi4cPD")
         self.players = self.conn.db["players"]
         self.matches = self.conn.db["matches"]
+
+    def check(self):
+
+        cursor = self.matches.find({"duration": {"$lt": 0}})
+        for match in cursor:
+            print(match.get("start_time"))
+            print(match.get("end_time"))
+
+            start_time = datetime.strptime(match.get("start_time"), "%Y-%m-%dT%H:%M:%S")
+            end_time = datetime.strptime(match.get("end_time"), "%Y-%m-%dT%H:%M:%S")
+
+            end_time = end_time + timedelta(days=1)
+            duration = int((end_time - start_time).total_seconds())
+
+            match["end_time"] = end_time.isoformat()
+            match["duration"] = duration
+
+            self.matches.update_one({"_id": match.get("_id")}, {'$set': match}, upsert=False)
+
+        print("DONE")
+
 
     def get_matches(self):
 
@@ -85,6 +106,10 @@ class MatchArchive:
         end_datetime = datetime.strptime(end, "%y.%m.%d %H:%M:%S")
 
         duration = int((end_datetime - start_datetime).total_seconds())
+
+        if duration < 0:
+            end_datetime = end_datetime + timedelta(days=1)
+            duration = int((end_datetime - start_datetime).total_seconds())
 
         # pgn regex to get match moves
         spl = game.split("\n")
