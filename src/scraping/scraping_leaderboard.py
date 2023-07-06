@@ -16,7 +16,7 @@ from src.mongo.connection import MongoConnection
 class LeaderboardScraper(Scraper):
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection("arizzisara", "JAnVC9Nedesi4cPD")
+        self.conn = MongoConnection()
         self.players = self.conn.db["players"]
         self.page_players = None
         self.iter_player = None

@@ -15,7 +15,7 @@ class FIDEScraper(Scraper):
 
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection("mik_dm_project", "Spindox!99")
+        self.conn = MongoConnection()
         self.players = self.conn.db["players"]
         self.ratings = self.conn.db["ratings"]
 

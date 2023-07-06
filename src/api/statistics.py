@@ -11,7 +11,7 @@ class StatisticsUpdater:
 
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection("delo_dm_project", "Xhemil1960")
+        self.conn = MongoConnection()
         self.players = self.conn.db["players"]
         self.statistics = self.conn.db["statistics"]
 

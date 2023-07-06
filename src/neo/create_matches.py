@@ -11,7 +11,7 @@ class AddMatches:
 
     def __init__(self, uri, user, password):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        self.conn = MongoConnection("arizzisara", "JAnVC9Nedesi4cPD")
+        self.conn = MongoConnection()
         self.matches = self.conn.db["matches"]
 
     def add(self):

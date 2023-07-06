@@ -13,7 +13,7 @@ class MatchArchive:
 
     def __init__(self):
         super().__init__()
-        self.conn = MongoConnection("arizzisara", "JAnVC9Nedesi4cPD")
+        self.conn = MongoConnection()
         self.players = self.conn.db["players"]
         self.matches = self.conn.db["matches"]
 
