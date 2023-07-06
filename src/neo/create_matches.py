@@ -1,4 +1,6 @@
 import logging
+import os
+
 import numpy as np
 
 from neo4j import GraphDatabase
@@ -46,8 +48,6 @@ class AddMatches:
     def create_match(self, match_info):
         with self.driver.session(database="neo4j") as session:
             session.execute_write(self._create_and_return_match, match_info)
-            # for record in result:
-            # print(f"Created win-loss between: {record['w']}, {record['l']}")
 
     @staticmethod
     def _create_and_return_match(tx, match_info):
@@ -108,7 +108,7 @@ class AddMatches:
 
 if __name__ == "__main__":
 
-    db_uri = "neo4j+s://d11af0bf.databases.neo4j.io"
-    db_user = "neo4j"
-    db_password = "VNBhq-T57oI9bT3YCoV5MMJZgQr9Gr9W9Owk8TZRSOE"
+    db_uri = os.getenv("NEO_HOST")
+    db_user = os.getenv("NEO_USER")
+    db_password = os.getenv("NEO_PSW")
     AddMatches(db_uri, db_user, db_password).add()

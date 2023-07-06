@@ -37,7 +37,6 @@ class MatchArchive:
 
         print("DONE")
 
-
     def get_matches(self):
 
         all_players = self.players.find({"username": {"$ne": None}})

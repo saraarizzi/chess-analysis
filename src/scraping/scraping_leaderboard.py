@@ -10,9 +10,6 @@ from scraper import Scraper
 from src.mongo.connection import MongoConnection
 
 
-# from airflow.providers.sqlite.hooks.sqlite import SqliteHook
-
-
 class LeaderboardScraper(Scraper):
     def __init__(self):
         super().__init__()
