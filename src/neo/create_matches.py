@@ -2,6 +2,8 @@ import logging
 import os
 
 import numpy as np
+import pandas as pd
+from json import dumps
 
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
@@ -15,19 +17,23 @@ class AddMatches:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
         self.conn = MongoConnection()
         self.matches = self.conn.db["matches"]
+        self.players = self.conn.db["players"]
 
     def add(self):
 
-        chunks = range(0, self.matches.count_documents({}), 2000)
+        usernames = dumps(list(self.players.find({"username": {"$ne": None}}, {"_id": 0, "username": 1})))
+        usernames = list(pd.read_json(path_or_buf=usernames, typ='frame')["username"])
+        query = {"white.username": {"$in": usernames}, "black.username": {"$in": usernames}}
+        chunks = range(0, self.matches.count_documents(query), 2000)
         num_chunks = len(chunks)
         count_chunk = 0
         for i in range(1, num_chunks + 1):
             count_chunk += 1
 
             if i < num_chunks:
-                to_process = self.matches.find({})[chunks[i - 1]:chunks[i]]
+                to_process = self.matches.find(query)[chunks[i - 1]:chunks[i]]
             else:
-                to_process = self.matches.find({})[chunks[i - 1]:chunks.stop]
+                to_process = self.matches.find(query)[chunks[i - 1]:chunks.stop]
 
             count = 0
             for match in to_process:
@@ -55,8 +61,8 @@ class AddMatches:
         # create relationship
         query = (
             "MATCH (w:Player {username: $u_w}), (l:Player {username: $u_l}) "
-            "CREATE (w)-[:WON {url_match: $url, result: $re_w, color: $c_w, accuracy: $a_w, rating: $ra_w, time_class: $tc}]->(l) "
-            "CREATE (l)-[:LOST {url_match: $url, result: $re_l, color: $c_l, accuracy: $a_l, rating: $ra_l, time_class: $tc}]->(w) "
+            "CREATE (w)-[:WON {url_match: $url, result: $re_w, color: $c_w, accuracy: $a_w, rating: $ra_w, time_class: $tc, start: $st, end: $en}]->(l) "
+            "CREATE (l)-[:LOST {url_match: $url, result: $re_l, color: $c_l, accuracy: $a_l, rating: $ra_l, time_class: $tc, start: $st, end: $en}]->(w) "
             "RETURN w, l"
         )
 
@@ -67,7 +73,8 @@ class AddMatches:
             c_w=match_info.get("color_winner"), c_l=match_info.get("color_loser"),
             a_w=match_info.get("accuracy_winner"), a_l=match_info.get("accuracy_loser"),
             ra_w=match_info.get("rating_winner"), ra_l=match_info.get("rating_loser"),
-            tc=match_info.get("time_class"), url=match_info.get("url_match")
+            tc=match_info.get("time_class"), url=match_info.get("url_match"),
+            st=match_info.get("start"), en=match_info.get("end")
         )
 
         try:
@@ -100,7 +107,9 @@ class AddMatches:
             "accuracy_winner": accuracies.get(color_winner), "accuracy_loser": accuracies.get(color_loser),
             "rating_winner": info_winner.get("rating"), "rating_loser": info_loser.get("rating"),
             "time_class": time_class,
-            "url_match": match.get("url")
+            "url_match": match.get("url"),
+            "start": match.get("start_time"),
+            "end": match.get("end_time"),
         }
 
         return info
